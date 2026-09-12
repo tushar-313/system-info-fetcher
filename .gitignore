@@ -43,3 +43,14 @@ tmp/
 temp/
 dist/
 build/
+
+# Internal Project & Documentation Files
+WAR_STORY.md
+The-Zero-Privilege-Pivot.pdf
+RITUAL.md
+ROADMAP.md
+MONITORING.md
+users/
+render.yaml
+deploy/
+
