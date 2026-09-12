@@ -99,6 +99,24 @@
       </div>
     </header>
 
+    <!-- Target System Mode Switcher -->
+    <div class="view-mode-bar">
+      <div class="mode-tabs">
+        <button class="mode-tab active" type="button" data-mode="client" title="Inspect this phone, laptop, or PC">
+          <span class="tab-icon">💻</span>
+          <span class="tab-text">This Device (<span data-client-device-tag>Detecting...</span>)</span>
+        </button>
+        <button class="mode-tab" type="button" data-mode="server" title="Inspect the hosting backend server">
+          <span class="tab-icon">☁️</span>
+          <span class="tab-text">Host Server (<span data-server-name-tag>Render / Host</span>)</span>
+        </button>
+      </div>
+      <div class="mode-info">
+        <span class="mode-indicator-dot"></span>
+        <span data-active-mode-label>Inspecting your local device hardware & OS</span>
+      </div>
+    </div>
+
     <main class="main-layout">
       <!-- Section 1: Interactive Neofetch/Fastfetch Terminal Showcase -->
       <section class="panel terminal-hero-panel">

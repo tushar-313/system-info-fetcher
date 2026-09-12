@@ -257,8 +257,11 @@ async function collectSystemSnapshot() {
 
     const loadAverages = os.loadavg().map((value) => roundNumber(value, 2));
     const temperatureValue = pickTemperature(temperature);
+    const effectiveUsed = (Number.isFinite(memory.available) && memory.available > 0)
+        ? (memory.total - memory.available)
+        : (memory.active || memory.used);
     const memoryUsage = Number.isFinite(memory.total) && memory.total > 0
-        ? roundNumber((memory.used / memory.total) * 100, 1)
+        ? roundNumber((effectiveUsed / memory.total) * 100, 1)
         : null;
 
     const perCoreCpu = Array.isArray(load.cpus)
@@ -329,10 +332,12 @@ async function collectSystemSnapshot() {
         processes: topProcesses,
         memory: {
             total: memory.total || null,
-            used: memory.used || null,
+            used: effectiveUsed != null ? effectiveUsed : memory.used,
+            rawUsed: memory.used || null,
             free: memory.free || null,
             available: memory.available || null,
             active: memory.active || null,
+            buffcache: memory.buffcache || null,
             swapTotal: memory.swaptotal || null,
             swapUsed: memory.swapused || null,
             usagePercent: memoryUsage,
@@ -942,10 +947,13 @@ app.get('/api/system/quick', async (req, res) => {
             safeCollect(() => si.currentLoad(), {}),
             safeCollect(() => si.mem(), {}),
         ]);
+        const effectiveUsed = (Number.isFinite(mem.available) && mem.available > 0)
+            ? (mem.total - mem.available)
+            : (mem.active || mem.used);
         res.json({
             sampledAt: new Date().toISOString(),
             cpuUsagePercent: roundNumber(load.currentLoad, 1),
-            memoryUsagePercent: (mem.total > 0) ? roundNumber((mem.used / mem.total) * 100, 1) : null,
+            memoryUsagePercent: (mem.total > 0) ? roundNumber((effectiveUsed / mem.total) * 100, 1) : null,
             loadAverages: os.loadavg().map(v => roundNumber(v, 2)),
             uptimeSeconds: safeOsUptimeSeconds(),
         });
@@ -1010,6 +1018,21 @@ app.get('/api/system', async (req, res) => {
             error: 'failed to collect system telemetry',
             detail: error instanceof Error ? error.message : 'unknown error',
         });
+    }
+});
+
+app.get('/api/client-info', (req, res) => {
+    try {
+        const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+        const clientIp = String(rawIp).split(',')[0].trim().replace(/^::ffff:/, '');
+        res.json({
+            ip: clientIp || '127.0.0.1',
+            userAgent: String(req.headers['user-agent'] || ''),
+            language: String(req.headers['accept-language'] || '').split(',')[0],
+            forwardedHost: req.headers['x-forwarded-host'] || req.headers['host'] || '',
+        });
+    } catch (err) {
+        res.json({ ip: '127.0.0.1', userAgent: '' });
     }
 });
 

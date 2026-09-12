@@ -78,15 +78,17 @@ function getAsciiLogo(platform) {
     ];
   } else if (platform === 'win32') {
     return [
-      `${c.brightCyan}  .----------------.  .----------------. `,
-      `${c.brightCyan}  | .--------------. || .--------------. |`,
-      `${c.brightCyan}  | | _____  _____ | || | _____  _____ | |`,
-      `${c.brightCyan}  | ||_   _||_   _|| || ||_   _||_   _|| |`,
-      `${c.brightCyan}  | |  | | /\  | |  | || |  | | /\  | |  | |`,
-      `${c.brightCyan}  | |  | |/  \| |  | || |  | |/  \| |  | |`,
-      `${c.brightCyan}  | |  |   /\   |  | || |  |   /\   |  | |`,
-      `${c.brightCyan}  | |  |__/  \__|  | || |  |__/  \__|  | |`,
-      `${c.brightCyan}  '----------------'  '----------------' `,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      ``,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
+      `${c.brightCyan}  ████████████   ████████████`,
     ];
   }
 
@@ -133,9 +135,12 @@ async function getFetchString() {
   const diskTotal = primaryDisk.size ? bytesLabel(primaryDisk.size) : 'N/A';
   const diskPct = primaryDisk.use ? `${primaryDisk.use.toFixed(1)}%` : 'N/A';
 
-  const memUsed = mem.used ? bytesLabel(mem.used) : 'N/A';
+  const effectiveMemUsed = (Number.isFinite(mem.available) && mem.available > 0)
+    ? (mem.total - mem.available)
+    : (mem.active || mem.used || 0);
+  const memUsed = effectiveMemUsed ? bytesLabel(effectiveMemUsed) : 'N/A';
   const memTotal = mem.total ? bytesLabel(mem.total) : 'N/A';
-  const memPct = mem.total ? ((mem.used / mem.total) * 100).toFixed(1) : '0';
+  const memPct = mem.total ? ((effectiveMemUsed / mem.total) * 100).toFixed(1) : '0';
 
   const primaryNet = Array.isArray(net) ? net.find(n => n.ip4 && n.ip4 !== '127.0.0.1' && !n.internal) || net[0] : null;
   const ipAddress = primaryNet ? primaryNet.ip4 : '127.0.0.1';
