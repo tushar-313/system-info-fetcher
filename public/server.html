@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#030702" />
+  <meta name="description" content="SysInfo Fetcher server telemetry dashboard with live CPU, memory, storage, and temperature data" />
+  <title>SysInfo Fetcher — Server Intel</title>
+  <link rel="stylesheet" href="/server.css" />
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <main class="shell">
+    <header class="topbar panel">
+      <div class="hero-copy">
+        <p class="eyebrow">SYSINFO // HOST METRICS (SERVER)</p>
+        <h1>Server Command View</h1>
+        <p class="lede">Real system data sampled from the server running this Node process, not from the viewer device. CPU, memory, storage, temperature, load, and network are refreshed live.</p>
+      </div>
+      <div class="actions">
+        <span class="chip live"><span class="dot"></span><span data-live-state>monitoring</span></span>
+        <span class="chip" data-now>--:--:--</span>
+        <span class="chip" data-sampled-at>waiting for sample</span>
+        <button class="chip action" type="button" data-refresh>refresh</button>
+        <a class="chip action" href="/">back</a>
+      </div>
+    </header>
+
+    <section class="panel metric-grid">
+      <article class="metric-card">
+        <span class="metric-label">CPU usage</span>
+        <strong class="metric-value" data-cpu-value>--%</strong>
+        <div class="meter"><span data-cpu-meter></span></div>
+        <p class="metric-note" data-cpu-note>Awaiting sample.</p>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">Memory usage</span>
+        <strong class="metric-value" data-memory-value>--%</strong>
+        <div class="meter"><span data-memory-meter></span></div>
+        <p class="metric-note" data-memory-note>Awaiting sample.</p>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">Storage usage</span>
+        <strong class="metric-value" data-storage-value>--%</strong>
+        <div class="meter"><span data-storage-meter></span></div>
+        <p class="metric-note" data-storage-note>Awaiting sample.</p>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">Temperature</span>
+        <strong class="metric-value" data-temperature-value>--</strong>
+        <div class="meter temp"><span data-temperature-meter></span></div>
+        <p class="metric-note" data-temperature-note>Awaiting sample.</p>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">Load average</span>
+        <strong class="metric-value" data-load-value>--</strong>
+        <div class="meter"><span data-load-meter></span></div>
+        <p class="metric-note" data-load-note>Awaiting sample.</p>
+      </article>
+
+      <article class="metric-card">
+        <span class="metric-label">Uptime</span>
+        <strong class="metric-value" data-uptime-value>--</strong>
+        <div class="meter"><span data-uptime-meter></span></div>
+        <p class="metric-note" data-uptime-note>Awaiting sample.</p>
+      </article>
+    </section>
+
+    <section class="chart-grid">
+      <article class="panel chart-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">graph</p>
+            <h2>CPU Load</h2>
+          </div>
+          <span class="metric-pill" data-cpu-chip>--%</span>
+        </div>
+        <canvas class="chart" data-chart="cpu" aria-label="CPU history chart"></canvas>
+        <p class="chart-foot" data-cpu-detail>Awaiting sample.</p>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">graph</p>
+            <h2>Memory Pressure</h2>
+          </div>
+          <span class="metric-pill" data-memory-chip>--%</span>
+        </div>
+        <canvas class="chart" data-chart="memory" aria-label="Memory history chart"></canvas>
+        <p class="chart-foot" data-memory-detail>Awaiting sample.</p>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">graph</p>
+            <h2>Storage Usage</h2>
+          </div>
+          <span class="metric-pill" data-storage-chip>--%</span>
+        </div>
+        <canvas class="chart" data-chart="storage" aria-label="Storage history chart"></canvas>
+        <p class="chart-foot" data-storage-detail>Awaiting sample.</p>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">graph</p>
+            <h2>Temperature</h2>
+          </div>
+          <span class="metric-pill" data-temperature-chip>--</span>
+        </div>
+        <canvas class="chart" data-chart="temperature" aria-label="Temperature history chart"></canvas>
+        <p class="chart-foot" data-temperature-detail>Awaiting sample.</p>
+      </article>
+    </section>
+
+    <section class="panel detail-grid">
+      <article class="detail-card">
+        <div class="card-head">
+          <h2>Hardware</h2>
+          <span>host profile</span>
+        </div>
+        <dl class="kv" data-hardware-details></dl>
+      </article>
+
+      <article class="detail-card">
+        <div class="card-head">
+          <h2>Network</h2>
+          <span>interfaces and traffic</span>
+        </div>
+        <dl class="kv" data-network-details></dl>
+      </article>
+
+      <article class="detail-card">
+        <div class="card-head">
+          <h2>Process</h2>
+          <span>node runtime</span>
+        </div>
+        <dl class="kv" data-process-details></dl>
+      </article>
+
+      <article class="detail-card">
+        <div class="card-head">
+          <h2>Time</h2>
+          <span>boot and clock</span>
+        </div>
+        <dl class="kv" data-time-details></dl>
+      </article>
+    </section>
+
+    <section class="panel card">
+      <div class="card-head">
+        <h2>Storage Volumes</h2>
+        <span class="metric-pill" data-storage-primary-label>primary</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mount</th>
+              <th>File System</th>
+              <th>Type</th>
+              <th>Used</th>
+              <th>Free</th>
+              <th>Size</th>
+              <th>Usage</th>
+            </tr>
+          </thead>
+          <tbody data-storage-table>
+            <tr><td colspan="7">Loading storage data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel card">
+      <div class="card-head">
+        <h2>Payload Registry</h2>
+        <a class="link" href="/api/files" target="_blank" rel="noreferrer">open /api/files</a>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Modified</th>
+            </tr>
+          </thead>
+          <tbody data-payload-table>
+            <tr><td colspan="4">Loading payload registry...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel card">
+      <div class="card-head">
+        <h2>Telemetry Log</h2>
+        <span>live events</span>
+      </div>
+      <div class="log" data-activity-log></div>
+    </section>
+  </main>
+
+  <script src="/server.js" type="module"></script>
+</body>
+</html>

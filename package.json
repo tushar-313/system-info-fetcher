@@ -1,0 +1,19 @@
+{
+  "name": "sysinfo-fetcher",
+  "version": "2.0.0",
+  "description": "Personal real-time system info fetcher and hardware telemetry dashboard",
+  "main": "dashboard.js",
+  "bin": {
+    "sysfetch": "./bin/fetch.js"
+  },
+  "scripts": {
+    "start": "node dashboard.js",
+    "fetch": "node bin/fetch.js",
+    "dev": "node dashboard.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "prom-client": "^15.1.3",
+    "systeminformation": "^5.31.5"
+  }
+}

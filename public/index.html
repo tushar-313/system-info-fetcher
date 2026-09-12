@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#070a13" />
+  <meta name="description" content="SysInfo Fetcher — Real-time system information fetcher and hardware telemetry dashboard" />
+  <title>SysInfo Fetcher — System Telemetry & Hardware Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="glow-bg glow-1"></div>
+  <div class="glow-bg glow-2"></div>
+  <div class="scanline-overlay"></div>
+
+  <div class="app-container">
+    <!-- Top Header Navigation -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <rect x="9" y="9" width="6" height="6" />
+            <line x1="9" y1="1" x2="9" y2="4" />
+            <line x1="15" y1="1" x2="15" y2="4" />
+            <line x1="9" y1="20" x2="9" y2="23" />
+            <line x1="15" y1="20" x2="15" y2="23" />
+            <line x1="20" y1="9" x2="23" y2="9" />
+            <line x1="20" y1="14" x2="23" y2="14" />
+            <line x1="1" y1="9" x2="4" y2="9" />
+            <line x1="1" y1="14" x2="4" y2="14" />
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title-row">
+            <h1 class="brand-name">SYSINFO // FETCHER</h1>
+            <span class="badge-tag">v2.0</span>
+          </div>
+          <p class="brand-sub">Real-Time Host Hardware & OS Telemetry</p>
+        </div>
+      </div>
+
+      <div class="status-group">
+        <div class="chip status-online">
+          <span class="pulse-dot"></span>
+          <span data-host-status>LIVE MONITORING</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">HOST</span>
+          <span class="chip-val" data-hostname-pill>sampling...</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">UPTIME</span>
+          <span class="chip-val" data-uptime-pill>--:--:--</span>
+        </div>
+        <div class="chip">
+          <span class="chip-label">CLOCK</span>
+          <span class="chip-val" data-clock>00:00:00</span>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="poll-selector">
+          <label for="pollRate">Rate:</label>
+          <select id="pollRate" data-poll-rate>
+            <option value="1000">1s (High)</option>
+            <option value="3000" selected>3s (Normal)</option>
+            <option value="5000">5s (Eco)</option>
+            <option value="0">Paused</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary" type="button" data-action="refresh" title="Refresh Telemetry">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Refresh
+        </button>
+        <button class="btn btn-secondary" type="button" data-action="copy-cli" title="Copy Fastfetch Specs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy CLI
+        </button>
+        <button class="btn btn-primary" type="button" data-action="export-json" title="Export System JSON">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export JSON
+        </button>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <!-- Section 1: Interactive Neofetch/Fastfetch Terminal Showcase -->
+      <section class="panel terminal-hero-panel">
+        <div class="terminal-window">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <span class="terminal-title">sysfetch — <span data-term-title-host>system</span> — 80×24</span>
+            <div class="terminal-actions">
+              <button class="btn-micro" type="button" data-action="copy-curl" title="Copy curl command">curl</button>
+              <button class="btn-micro" type="button" data-action="copy-cli" title="Copy text specs">copy</button>
+            </div>
+          </div>
+          <div class="terminal-body">
+            <div class="fastfetch-container">
+              <!-- Left ASCII Art Column -->
+              <pre class="ascii-art" data-ascii-logo>
+                    'c.          
+                 ,xNMM.          
+               .OMMMMo           
+               lMM"              
+     .;loddo:.  .olloddol;.      
+   cKMMMMMMMMMMNWMMMMMMMMMM0:    
+ .KMMMMMMMMMMMMMMMMMMMMMMMWd.   
+ XMMMMMMMMMMMMMMMMMMMMMMMX.     
+;MMMMMMMMMMMMMMMMMMMMMMMM:     
+:MMMMMMMMMMMMMMMMMMMMMMMM:     
+.MMMMMMMMMMMMMMMMMMMMMMMMX.    
+ kMMMMMMMMMMMMMMMMMMMMMMMMWd.  
+  .XMMMMMMMMMMMMMMMMMMMMMMMMk   
+   .XMMMMMMMMMMMMMMMMMMMMMMK.   
+     kMMMMMMMMMMMMMMMMMMMMd     
+      ;KMMMMMMMWXXWMMMMMMk.     
+        .cooc,.    .,coo:.      
+              </pre>
+
+              <!-- Right Specifications Column -->
+              <div class="specs-column">
+                <div class="specs-title" data-specs-title>user@hostname</div>
+                <div class="specs-divider" data-specs-divider>────────────────────────────</div>
+                <dl class="specs-list" data-specs-list>
+                  <div class="spec-row"><dt>OS</dt><dd data-spec-os>Loading...</dd></div>
+                  <div class="spec-row"><dt>Host</dt><dd data-spec-host>Loading...</dd></div>
+                  <div class="spec-row"><dt>Kernel</dt><dd data-spec-kernel>Loading...</dd></div>
+                  <div class="spec-row"><dt>Uptime</dt><dd data-spec-uptime>Loading...</dd></div>
+                  <div class="spec-row"><dt>Architecture</dt><dd data-spec-arch>Loading...</dd></div>
+                  <div class="spec-row"><dt>Node.js</dt><dd data-spec-node>Loading...</dd></div>
+                  <div class="spec-row"><dt>CPU</dt><dd data-spec-cpu>Loading...</dd></div>
+                  <div class="spec-row"><dt>GPU</dt><dd data-spec-gpu>Loading...</dd></div>
+                  <div class="spec-row"><dt>Memory</dt><dd data-spec-mem>Loading...</dd></div>
+                  <div class="spec-row"><dt>Disk (/)</dt><dd data-spec-disk>Loading...</dd></div>
+                  <div class="spec-row"><dt>Local IP</dt><dd data-spec-ip>Loading...</dd></div>
+                  <div class="spec-row" data-spec-bat-row><dt>Battery</dt><dd data-spec-bat>Loading...</dd></div>
+                </dl>
+                <div class="palette-bar">
+                  <span class="color-swatch sw-black"></span>
+                  <span class="color-swatch sw-red"></span>
+                  <span class="color-swatch sw-green"></span>
+                  <span class="color-swatch sw-yellow"></span>
+                  <span class="color-swatch sw-blue"></span>
+                  <span class="color-swatch sw-magenta"></span>
+                  <span class="color-swatch sw-cyan"></span>
+                  <span class="color-swatch sw-white"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Real-time Telemetry Gauges Strip -->
+      <section class="gauge-strip">
+        <article class="card gauge-card">
+          <div class="card-label">CPU LOAD</div>
+          <div class="gauge-value" data-val-cpu>--%</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-cyan" data-bar-cpu style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-cpu>Sampling...</div>
+        </article>
+
+        <article class="card gauge-card">
+          <div class="card-label">MEMORY PRESSURE</div>
+          <div class="gauge-value" data-val-mem>--%</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-green" data-bar-mem style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-mem>Sampling...</div>
+        </article>
+
+        <article class="card gauge-card">
+          <div class="card-label">PRIMARY DISK</div>
+          <div class="gauge-value" data-val-disk>--%</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-purple" data-bar-disk style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-disk>Sampling...</div>
+        </article>
+
+        <article class="card gauge-card">
+          <div class="card-label">CPU TEMP</div>
+          <div class="gauge-value" data-val-temp>--°C</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-yellow" data-bar-temp style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-temp>Sampling...</div>
+        </article>
+
+        <article class="card gauge-card">
+          <div class="card-label">LOAD AVERAGE</div>
+          <div class="gauge-value" data-val-load>--</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-cyan" data-bar-load style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-load>1m / 5m / 15m</div>
+        </article>
+
+        <article class="card gauge-card">
+          <div class="card-label">BATTERY / POWER</div>
+          <div class="gauge-value" data-val-bat>--%</div>
+          <div class="progress-track">
+            <div class="progress-fill fill-green" data-bar-bat style="width: 0%"></div>
+          </div>
+          <div class="card-meta" data-meta-bat>Sampling...</div>
+        </article>
+      </section>
+
+      <!-- Section 3: Performance History Charts & Multi-Core Inspector -->
+      <section class="performance-grid">
+        <!-- Live History Chart -->
+        <article class="card chart-card">
+          <div class="card-head">
+            <div>
+              <span class="eyebrow-tag">TELEMETRY STREAM</span>
+              <h2>Performance History</h2>
+            </div>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-color line-cpu"></span> CPU</span>
+              <span class="legend-item"><span class="legend-color line-mem"></span> Memory</span>
+            </div>
+          </div>
+          <div class="canvas-wrapper">
+            <canvas id="perfChart" class="perf-chart"></canvas>
+          </div>
+          <div class="chart-footer">
+            <span data-chart-sampled>Live history (last 45 samples)</span>
+            <span class="chart-rate-indicator">● Active</span>
+          </div>
+        </article>
+
+        <!-- Multi-Core CPU Breakdown -->
+        <article class="card cores-card">
+          <div class="card-head">
+            <div>
+              <span class="eyebrow-tag">CPU TOPOLOGY</span>
+              <h2>Multi-Core Load</h2>
+            </div>
+            <span class="badge" data-core-count-badge>-- Cores</span>
+          </div>
+          <div class="cores-container" data-cores-grid>
+            <div class="empty-hint">Waiting for CPU core data...</div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Section 4: Storage Volumes & Hardware Profile -->
+      <section class="details-grid">
+        <!-- Storage Volumes Table -->
+        <article class="card storage-card">
+          <div class="card-head">
+            <div>
+              <span class="eyebrow-tag">FILE SYSTEM</span>
+              <h2>Storage Volumes</h2>
+            </div>
+            <span class="badge" data-volume-count>0 Volumes</span>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mount</th>
+                  <th>Type</th>
+                  <th>Used</th>
+                  <th>Free</th>
+                  <th>Total</th>
+                  <th>Usage</th>
+                </tr>
+              </thead>
+              <tbody data-storage-tbody>
+                <tr><td colspan="6" class="loading-row">Scanning file systems...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Network & Hardware Profile -->
+        <article class="card network-card">
+          <div class="card-head">
+            <div>
+              <span class="eyebrow-tag">I/O & HARDWARE</span>
+              <h2>Network & Platform</h2>
+            </div>
+            <span class="badge" data-net-badge>Active</span>
+          </div>
+          <div class="network-details" data-network-list>
+            <div class="empty-hint">Discovering network adapters...</div>
+          </div>
+        </article>
+      </section>
+
+      <!-- Section 5: Live Process Explorer -->
+      <section class="card process-card">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow-tag">ACTIVITY MONITOR</span>
+            <h2>Top Running Processes</h2>
+          </div>
+          <div class="process-search-wrapper">
+            <input type="text" class="search-input" placeholder="Filter processes..." data-process-search />
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table process-table">
+            <thead>
+              <tr>
+                <th>PID</th>
+                <th>Process Name</th>
+                <th>CPU %</th>
+                <th>Memory %</th>
+                <th>User</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody data-process-tbody>
+              <tr><td colspan="6" class="loading-row">Querying system processes...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section 6: Collapsible Developer & Legacy Endpoints Drawer (Hidden by default, preserves all old endpoints) -->
+      <section class="card endpoints-drawer">
+        <details class="drawer-disclosure">
+          <summary class="drawer-summary">
+            <div class="drawer-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              <span>Developer Endpoints & Project Payloads</span>
+            </div>
+            <span class="badge-subtle">8 Endpoints Available</span>
+          </summary>
+          <div class="drawer-content">
+            <p class="drawer-desc">All REST and metrics endpoints remain operational and available for automation, curl scripts, and legacy client compatibility:</p>
+            <div class="endpoint-grid">
+              <a href="/api/system" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/api/system</code>
+                <span class="endpoint-label">Full JSON Telemetry</span>
+              </a>
+              <a href="/api/system/quick" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/api/system/quick</code>
+                <span class="endpoint-label">Lightweight Fast Poll</span>
+              </a>
+              <a href="/cli" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/cli</code>
+                <span class="endpoint-label">ANSI Fastfetch Text</span>
+              </a>
+              <a href="/healthz" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/healthz</code>
+                <span class="endpoint-label">Health Status</span>
+              </a>
+              <a href="/metrics" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/metrics</code>
+                <span class="endpoint-label">Prometheus Metrics</span>
+              </a>
+              <a href="/api/files" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/api/files</code>
+                <span class="endpoint-label">Payload Registry</span>
+              </a>
+              <a href="/server.html" target="_blank" class="endpoint-item">
+                <span class="method get">GET</span>
+                <code>/server.html</code>
+                <span class="endpoint-label">Server Intel View</span>
+              </a>
+            </div>
+          </div>
+        </details>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-left">
+        <span>SysInfo Fetcher & Telemetry Dashboard</span>
+        <span class="sep">•</span>
+        <span data-footer-sampled>Last Sample: --</span>
+      </div>
+      <div class="footer-right">
+        <span>CLI Shortcut: <code>curl http://localhost:8000/</code></span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast Notification element -->
+  <div class="toast" data-toast>Copied to clipboard!</div>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
