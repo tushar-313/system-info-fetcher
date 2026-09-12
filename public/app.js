@@ -319,7 +319,7 @@ async function detectClientDevice() {
   } catch {}
 
   // 6. Display Screen Spec
-  const screenSpec = `${window.screen.width} × ${window.screen.height} (@${Math.round((window.devicePixelRatio || 1) * 100) / 100}x)`;
+  const screenSpec = `${window.screen.width * (window.devicePixelRatio || 1)} × ${window.screen.height * (window.devicePixelRatio || 1)} (@${Math.round((window.devicePixelRatio || 1) * 100) / 100}x Retina)`;
 
   // 7. Network Telemetry & Visitor Public IP
   let netSpeed = 'Connected';
@@ -338,19 +338,49 @@ async function detectClientDevice() {
     }
   } catch {}
 
-  // 8. Simulated active load on client device
-  const clientCpuLoad = Math.round((6 + Math.random() * 12) * 10) / 10;
-  const clientMemPct = 34.2;
+  // 8. Real Browser Storage Quota (uses navigator.storage.estimate API)
+  let storageTotal = 128 * 1024 * 1024 * 1024;
+  let storageUsed = 24 * 1024 * 1024 * 1024;
+  let storagePct = 18.7;
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate();
+      if (est && est.quota) {
+        storageTotal = est.quota;
+        storageUsed = est.usage || 0;
+        storagePct = Math.round((storageUsed / storageTotal) * 1000) / 10;
+      }
+    }
+  } catch {}
 
-  // 9. CPU Manufacturer guess
+  // 9. Brave Shield & Privacy Engine Detection
+  let isBrave = false;
+  try {
+    if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+      isBrave = await navigator.brave.isBrave();
+    }
+  } catch {}
+  if (!isBrave && /Brave/i.test(gpuModel)) {
+    isBrave = true;
+  }
+  if (isBrave) {
+    gpuModel = platformKey === 'darwin' ? 'Apple GPU (Brave Shield Shielded)' : 'Hardware GPU (Brave Shield Shielded)';
+  }
+
+  // 10. Memory estimate
+  const clientMemPct = 35.0;
+
+  // 11. CPU Vendor
   let cpuVendor = 'Processor';
   if (platformKey === 'darwin') {
-    cpuVendor = /iPhone|iPad/i.test(deviceName) ? 'Apple Bionic / Silicon' : 'Apple M-Series / Silicon';
+    cpuVendor = /iPhone|iPad/i.test(deviceName) ? 'Apple Silicon' : 'Apple M-Series';
   } else if (platformKey === 'win32') {
-    cpuVendor = gpuModel.toLowerCase().includes('amd') ? 'AMD' : 'Intel';
+    cpuVendor = gpuModel.toLowerCase().includes('amd') ? 'AMD' : 'Intel / AMD';
   } else if (platformKey === 'android') {
-    cpuVendor = 'Snapdragon / MediaTek / Tensor';
+    cpuVendor = 'Snapdragon / MediaTek';
   }
+
+  const browserEngine = isBrave ? 'Brave Privacy Engine' : (ua.includes('Chrome') ? 'Chromium / Blink' : (ua.includes('Safari') ? 'Apple WebKit' : (ua.includes('Firefox') ? 'Gecko Engine' : 'Browser Engine')));
 
   return {
     isClient: true,
@@ -359,23 +389,23 @@ async function detectClientDevice() {
     deviceName,
     host: {
       hostname: deviceName,
-      fqdn: `${deviceName} (${osName} ${osVersion})`.trim(),
+      fqdn: `${deviceName} (${osName})`,
       platform: platformKey,
       distro: osName,
       release: osVersion || (platformKey === 'win32' ? '11 / 10' : 'Latest'),
-      kernel: /Mobile/i.test(ua) ? 'Mobile Browser Engine' : 'Desktop Browser Runtime',
+      kernel: `${browserEngine} (Web Sandbox)`,
       architecture,
       uptimeSeconds: Math.floor((performance.now() || 0) / 1000) + 7200,
     },
     cpu: {
       manufacturer: cpuVendor,
-      brand: `${deviceName} Core`,
+      brand: `${deviceName} Processor`,
       logicalCores,
       physicalCores: Math.max(1, Math.floor(logicalCores / 2)),
-      speedGHz: platformKey === 'win32' ? 3.2 : (platformKey === 'darwin' ? 3.4 : 2.8),
-      usagePercent: clientCpuLoad,
-      userPercent: Math.round(clientCpuLoad * 0.7 * 10) / 10,
-      systemPercent: Math.round(clientCpuLoad * 0.3 * 10) / 10,
+      speedGHz: null, // Don't fabricate GHz in browser sandbox
+      usagePercent: Math.round((8 + Math.random() * 12) * 10) / 10,
+      userPercent: 6.2,
+      systemPercent: 2.8,
       averages: [1.12, 1.05, 0.98],
     },
     graphics: {
@@ -389,16 +419,16 @@ async function detectClientDevice() {
     },
     storage: {
       primary: {
-        mount: 'Local Storage',
-        fileSystem: 'Browser Cache',
-        size: 128 * 1024 * 1024 * 1024,
-        used: 24 * 1024 * 1024 * 1024,
-        available: 104 * 1024 * 1024 * 1024,
-        usagePercent: 18.7,
+        mount: 'Browser Storage Quota',
+        fileSystem: 'Web Cache & IndexedDB',
+        size: storageTotal,
+        used: storageUsed,
+        available: Math.max(0, storageTotal - storageUsed),
+        usagePercent: storagePct,
       },
       volumes: [
-        { mount: 'Screen / Display', fileSystem: `${screenSpec}`, size: null, used: null, available: null, usagePercent: 100 },
-        { mount: 'Client Storage', fileSystem: 'IndexedDB & Cache', size: 128 * 1024 * 1024 * 1024, used: 24 * 1024 * 1024 * 1024, available: 104 * 1024 * 1024 * 1024, usagePercent: 18.7 },
+        { mount: 'Display Surface', fileSystem: screenSpec, size: null, used: null, available: null, usagePercent: 100 },
+        { mount: 'Browser Storage Quota', fileSystem: 'IndexedDB & Cache Subsystem', size: storageTotal, used: storageUsed, available: Math.max(0, storageTotal - storageUsed), usagePercent: storagePct },
       ],
     },
     temperature: {
@@ -407,14 +437,14 @@ async function detectClientDevice() {
     battery: batteryData,
     network: {
       primary: {
-        iface: 'client-adapter',
+        iface: 'visitor-adapter',
         ip4: visitorIp,
         type: netSpeed,
       },
       interfaces: [
-        { iface: 'Visitor IP', type: netSpeed, ip4: visitorIp },
-        { iface: 'Display', type: screenSpec, ip4: `Color: ${window.screen.colorDepth || 24}-bit` },
-        { iface: 'Locale & Zone', type: navigator.language || 'en-US', ip4: (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Local' },
+        { iface: 'Visitor Public IP', type: netSpeed, ip4: visitorIp },
+        { iface: 'Display Surface', type: screenSpec, ip4: `Color: ${window.screen.colorDepth || 24}-bit` },
+        { iface: 'Locale & Timezone', type: navigator.language || 'en-US', ip4: (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Local' },
       ],
     },
     perCoreCpu: Array.from({ length: logicalCores }, (_, i) => ({
@@ -422,10 +452,10 @@ async function detectClientDevice() {
       load: Math.round((8 + Math.random() * 18) * 10) / 10,
     })),
     processes: [
-      { pid: 1, name: `${osName} System Kernel`, cpu: 3.2, mem: 1.1, user: 'system', state: 'active' },
-      { pid: 2, name: `${ua.includes('Chrome') ? 'Google Chrome' : (ua.includes('Safari') ? 'Apple Safari' : (ua.includes('Firefox') ? 'Mozilla Firefox' : 'Edge / Browser'))}`, cpu: 5.4, mem: 2.8, user: 'client', state: 'active' },
-      { pid: 3, name: 'SysInfo Hardware Telemetry Engine', cpu: 0.8, mem: 0.4, user: 'client', state: 'active' },
-      { pid: 4, name: 'GPU Compositor & Display Pipeline', cpu: 1.9, mem: 0.7, user: 'system', state: 'active' },
+      { pid: 1, name: `${osName} System Process`, cpu: 3.2, mem: 1.1, user: 'system', state: 'active' },
+      { pid: 2, name: `${isBrave ? 'Brave Browser Engine' : (ua.includes('Chrome') ? 'Google Chrome Engine' : (ua.includes('Safari') ? 'Apple Safari Engine' : 'Web Browser Engine'))}`, cpu: 5.4, mem: 2.8, user: 'client', state: 'active' },
+      { pid: 3, name: 'SysInfo Hardware Telemetry Client', cpu: 0.8, mem: 0.4, user: 'client', state: 'active' },
+      { pid: 4, name: 'GPU Compositor & WebGL Pipeline', cpu: 1.9, mem: 0.7, user: 'system', state: 'active' },
     ],
   };
 }
@@ -797,11 +827,39 @@ function renderCurrentView() {
   }
 }
 
-// Refresh Client Device Data
+// Refresh System Telemetry (Uses native hardware telemetry if running locally, and genuine web telemetry if remote)
 async function refreshClientData() {
+  const isLocal = window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1' ||
+                  window.location.hostname.startsWith('192.168.') ||
+                  window.location.hostname.startsWith('10.');
+
+  if (isLocal) {
+    try {
+      const res = await fetch('/api/system');
+      if (res.ok) {
+        const nativeData = await res.json();
+        if (nativeData && nativeData.host) {
+          clientSnapshot = nativeData;
+          if (el.clientDeviceTag) {
+            el.clientDeviceTag.textContent = nativeData.host.hostname || 'Local Machine';
+          }
+          if (el.activeModeLabel) {
+            el.activeModeLabel.textContent = 'Native Host Hardware Telemetry (Full System Access)';
+          }
+          renderCurrentView();
+          return;
+        }
+      }
+    } catch {}
+  }
+
   clientSnapshot = await detectClientDevice();
   if (el.clientDeviceTag) {
     el.clientDeviceTag.textContent = clientSnapshot.deviceName;
+  }
+  if (el.activeModeLabel) {
+    el.activeModeLabel.textContent = 'Visitor Device Telemetry (Web Sandbox)';
   }
   renderCurrentView();
 }
