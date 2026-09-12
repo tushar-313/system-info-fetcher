@@ -1,9 +1,7 @@
-// SysInfo Fetcher — Real-Time Telemetry & Client Device Inspector
+// SysInfo Fetcher — Real-Time Client System Hardware & OS Telemetry
 const HISTORY_LIMIT = 45;
 let pollTimer = null;
 let pollInterval = 3000;
-let currentMode = 'client'; // 'client' (Visitor's phone/laptop/PC) or 'server' (Render Cloud / Host)
-let serverSnapshot = null;
 let clientSnapshot = null;
 const perfHistory = [];
 
@@ -20,10 +18,8 @@ const el = {
   exportJsonBtn: document.querySelector('[data-action="export-json"]'),
   toast: document.querySelector('[data-toast]'),
   
-  // Mode Switcher Elements
-  modeTabs: document.querySelectorAll('[data-mode]'),
+  // Active Device Info
   clientDeviceTag: document.querySelector('[data-client-device-tag]'),
-  serverNameTag: document.querySelector('[data-server-name-tag]'),
   activeModeLabel: document.querySelector('[data-active-mode-label]'),
   
   // Terminal
@@ -196,38 +192,14 @@ async function detectClientDevice() {
   let logoColor = '#06b6d4';
   let architecture = 'x86_64';
 
-  // 1. User-Agent / High-Entropy Client Hints Detection
-  if (/iPhone/i.test(ua)) {
-    platformKey = 'darwin';
-    osName = 'iOS';
-    deviceName = 'Apple iPhone';
-    logoColor = '#34d399';
-    architecture = 'arm64';
-    const match = ua.match(/OS (\d+[_.]\d+)/);
-    if (match) osVersion = match[1].replace(/_/g, '.');
-  } else if (/iPad/i.test(ua)) {
-    platformKey = 'darwin';
-    osName = 'iPadOS';
-    deviceName = 'Apple iPad';
-    logoColor = '#34d399';
-    architecture = 'arm64';
-    const match = ua.match(/OS (\d+[_.]\d+)/);
-    if (match) osVersion = match[1].replace(/_/g, '.');
-  } else if (/Android/i.test(ua)) {
-    platformKey = 'android';
-    osName = 'Android';
-    deviceName = 'Android Device';
-    logoColor = '#3ddc84';
-    architecture = 'arm64';
-    const match = ua.match(/Android (\d+(\.\d+)?)/);
-    if (match) osVersion = match[1];
+  // 1. Explicit OS & Platform Detection
+  const isWindows = /Windows|Win32|Win64|WOW64/i.test(ua) || (navigator.platform && /Win/i.test(navigator.platform));
+  const isAndroid = /Android/i.test(ua);
+  const isIOS = !isWindows && /iPhone|iPad|iPod/i.test(ua);
+  const isMac = !isWindows && !isAndroid && !isIOS && (/Macintosh|Mac OS X/i.test(ua) || (navigator.platform && /Mac/i.test(navigator.platform)));
+  const isLinux = !isWindows && !isMac && !isAndroid && !isIOS && (/Linux/i.test(ua) || (navigator.platform && /Linux/i.test(navigator.platform)));
 
-    // Try detecting brand if present in UA
-    if (/Samsung|SM-|GT-/i.test(ua)) deviceName = 'Samsung Galaxy';
-    else if (/Pixel/i.test(ua)) deviceName = 'Google Pixel';
-    else if (/Xiaomi|Redmi|POCO/i.test(ua)) deviceName = 'Xiaomi Phone';
-    else if (/OnePlus/i.test(ua)) deviceName = 'OnePlus Phone';
-  } else if (/Windows/i.test(ua)) {
+  if (isWindows) {
     platformKey = 'win32';
     osName = 'Windows';
     deviceName = 'Windows PC';
@@ -235,7 +207,28 @@ async function detectClientDevice() {
     if (ua.includes('Windows NT 10.0')) osVersion = '11 / 10';
     else if (ua.includes('Windows NT 6.3')) osVersion = '8.1';
     else if (ua.includes('Windows NT 6.1')) osVersion = '7';
-  } else if (/Macintosh|Mac OS X/i.test(ua)) {
+    architecture = /x64|WOW64|Win64/i.test(ua) ? 'x86_64' : 'x86';
+  } else if (isAndroid) {
+    platformKey = 'android';
+    osName = 'Android';
+    deviceName = 'Android Phone';
+    logoColor = '#3ddc84';
+    architecture = 'arm64';
+    const match = ua.match(/Android (\d+(\.\d+)?)/);
+    if (match) osVersion = match[1];
+    if (/Samsung|SM-|GT-/i.test(ua)) deviceName = 'Samsung Galaxy';
+    else if (/Pixel/i.test(ua)) deviceName = 'Google Pixel';
+    else if (/Xiaomi|Redmi|POCO/i.test(ua)) deviceName = 'Xiaomi Phone';
+    else if (/OnePlus/i.test(ua)) deviceName = 'OnePlus Phone';
+  } else if (isIOS) {
+    platformKey = 'darwin';
+    osName = /iPad/i.test(ua) ? 'iPadOS' : 'iOS';
+    deviceName = /iPad/i.test(ua) ? 'Apple iPad' : 'Apple iPhone';
+    logoColor = '#34d399';
+    architecture = 'arm64';
+    const match = ua.match(/OS (\d+[_.]\d+)/);
+    if (match) osVersion = match[1].replace(/_/g, '.');
+  } else if (isMac) {
     platformKey = 'darwin';
     osName = 'macOS';
     deviceName = 'Apple Mac';
@@ -243,11 +236,12 @@ async function detectClientDevice() {
     architecture = ua.includes('arm') ? 'arm64' : 'arm64 / x86_64';
     const match = ua.match(/Mac OS X (\d+[_.]\d+([_.]\d+)?)/);
     if (match) osVersion = match[1].replace(/_/g, '.');
-  } else if (/Linux/i.test(ua)) {
+  } else if (isLinux) {
     platformKey = 'linux';
     osName = 'Linux';
     deviceName = 'Linux Machine';
     logoColor = '#fbbf24';
+    architecture = 'x86_64';
   }
 
   // Modern User-Agent Client Hints (Chromium / Edge / Brave / Android)
@@ -778,62 +772,38 @@ function drawPerfChart() {
   ctx.restore();
 }
 
-// Master Render Pipeline (Switches seamlessly between Client Device and Server)
+// Master Render Pipeline (Always renders visitor's device specs)
 function renderCurrentView() {
-  const activeData = currentMode === 'client' ? (clientSnapshot || serverSnapshot) : (serverSnapshot || clientSnapshot);
-  if (!activeData) return;
+  if (!clientSnapshot) return;
 
-  updateFastfetch(activeData);
-  updateGauges(activeData);
-  updateCores(activeData.perCoreCpu);
-  updateStorageTable(activeData.storage && activeData.storage.volumes);
-  updateNetwork(activeData.network);
+  updateFastfetch(clientSnapshot);
+  updateGauges(clientSnapshot);
+  updateCores(clientSnapshot.perCoreCpu);
+  updateStorageTable(clientSnapshot.storage && clientSnapshot.storage.volumes);
+  updateNetwork(clientSnapshot.network);
 
   const query = el.processSearch ? el.processSearch.value : '';
-  updateProcessTable(activeData.processes, query);
+  updateProcessTable(clientSnapshot.processes, query);
 
   // Push into chart history
-  const cpuVal = (activeData.cpu && activeData.cpu.usagePercent) || 0;
-  const memVal = (activeData.memory && activeData.memory.usagePercent) || 0;
+  const cpuVal = (clientSnapshot.cpu && clientSnapshot.cpu.usagePercent) || 0;
+  const memVal = (clientSnapshot.memory && clientSnapshot.memory.usagePercent) || 0;
   perfHistory.push({ cpu: cpuVal, mem: memVal, time: Date.now() });
   if (perfHistory.length > HISTORY_LIMIT) perfHistory.shift();
   drawPerfChart();
 
   if (el.footerSampled) {
-    el.footerSampled.textContent = `Last Sample: ${new Date().toLocaleTimeString()} [${currentMode.toUpperCase()}]`;
+    el.footerSampled.textContent = `Last Sample: ${new Date().toLocaleTimeString()} [LIVE]`;
   }
 }
 
-// Fetch Server Telemetry from Backend
-async function fetchServerData() {
-  try {
-    const res = await fetch('/api/system');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    serverSnapshot = data;
-
-    if (el.serverNameTag) {
-      el.serverNameTag.textContent = data.host ? data.host.distro || 'Cloud' : 'Server';
-    }
-
-    if (currentMode === 'server') {
-      renderCurrentView();
-    }
-  } catch (err) {
-    console.error('Failed to fetch server telemetry:', err);
-    if (el.hostStatus && currentMode === 'server') el.hostStatus.textContent = 'RECONNECTING...';
-  }
-}
-
-// Fetch and Refresh Client Device Data
+// Refresh Client Device Data
 async function refreshClientData() {
   clientSnapshot = await detectClientDevice();
   if (el.clientDeviceTag) {
     el.clientDeviceTag.textContent = clientSnapshot.deviceName;
   }
-  if (currentMode === 'client') {
-    renderCurrentView();
-  }
+  renderCurrentView();
 }
 
 // Polling loop
@@ -841,36 +811,13 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   if (pollInterval > 0) {
     pollTimer = setInterval(async () => {
-      await fetchServerData();
-      if (currentMode === 'client') {
-        await refreshClientData();
-      }
+      await refreshClientData();
     }, pollInterval);
   }
 }
 
 // Setup Event Handlers
 function setupEvents() {
-  // Mode Switcher Tabs
-  el.modeTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const targetMode = tab.dataset.mode;
-      if (targetMode === currentMode) return;
-      currentMode = targetMode;
-
-      el.modeTabs.forEach((t) => t.classList.toggle('active', t.dataset.mode === currentMode));
-
-      if (el.activeModeLabel) {
-        el.activeModeLabel.textContent = currentMode === 'client'
-          ? 'Inspecting your local device hardware & OS'
-          : 'Inspecting host server (Render Cloud) telemetry';
-      }
-
-      showToast(currentMode === 'client' ? 'Switched to Your Device view' : 'Switched to Host Server view');
-      renderCurrentView();
-    });
-  });
-
   if (el.pollRate) {
     el.pollRate.addEventListener('change', (e) => {
       pollInterval = Number(e.target.value);
@@ -881,10 +828,8 @@ function setupEvents() {
 
   if (el.refreshBtn) {
     el.refreshBtn.addEventListener('click', async () => {
-      showToast('Refreshing telemetry...');
-      await fetchServerData();
+      showToast('Refreshing device telemetry...');
       await refreshClientData();
-      renderCurrentView();
     });
   }
 
@@ -911,27 +856,26 @@ function setupEvents() {
 
   if (el.exportJsonBtn) {
     el.exportJsonBtn.addEventListener('click', () => {
-      const snapshot = currentMode === 'client' ? clientSnapshot : serverSnapshot;
-      if (!snapshot) {
-        showToast('No snapshot data ready yet');
+      if (!clientSnapshot) {
+        showToast('No device telemetry ready yet');
         return;
       }
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(snapshot, null, 2));
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(clientSnapshot, null, 2));
       const a = document.createElement('a');
       a.setAttribute('href', dataStr);
-      a.setAttribute('download', `sysinfo-${currentMode}-${Date.now()}.json`);
+      const osTag = (clientSnapshot.host && clientSnapshot.host.distro) || 'device';
+      a.setAttribute('download', `sysinfo-${osTag.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.json`);
       document.body.appendChild(a);
       a.click();
       a.remove();
-      showToast(`Exported ${currentMode} telemetry JSON!`);
+      showToast('Exported device telemetry JSON!');
     });
   }
 
   if (el.processSearch) {
     el.processSearch.addEventListener('input', (e) => {
-      const activeData = currentMode === 'client' ? clientSnapshot : serverSnapshot;
-      if (activeData && activeData.processes) {
-        updateProcessTable(activeData.processes, e.target.value);
+      if (clientSnapshot && clientSnapshot.processes) {
+        updateProcessTable(clientSnapshot.processes, e.target.value);
       }
     });
   }
@@ -943,8 +887,6 @@ function setupEvents() {
 async function boot() {
   setupEvents();
   await refreshClientData();
-  await fetchServerData();
-  renderCurrentView();
   startPolling();
 }
 
